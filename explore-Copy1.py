@@ -208,9 +208,9 @@ mask_np = np.array(mask_list)
 tf.reset_default_graph()
 default_sizes = 128
 size_emb = 64
-num_layers_encoder = 4
+num_layers_encoder = 6
 hidden_filters = 256
-num_layers_subprogram = 2
+num_layers_subprogram = 3
 hidden_filters_subprogram = 256
 init_mag = 1e-3
 cmd_mat = tf.Variable(init_mag*tf.random_normal([num_cmd, size_emb]))
@@ -439,7 +439,7 @@ trn_samples.shape, val_samples.shape
 
 
 total_eval_itr = -1
-bs = 256 # trn_samples.shape[0] // 2
+bs = 1024 # trn_samples.shape[0] // 2
 bs_eval = 4096 * 2
 num_eval_samples = float(val_samples_all.shape[0])
 num_eval_batches = int(np.ceil(num_eval_samples / bs_eval))
