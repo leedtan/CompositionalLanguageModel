@@ -457,8 +457,8 @@ trn_samples.shape, val_samples.shape
 
 
 total_eval_itr = -1
-bs = 16 # trn_samples.shape[0] // 2
-bs_eval = 4096 * 2
+bs = 32 # trn_samples.shape[0] // 2
+bs_eval = 1024 * 2
 num_eval_samples = float(val_samples_all.shape[0])
 num_eval_batches = int(np.ceil(num_eval_samples / bs_eval))
 for itr in range(100000):
