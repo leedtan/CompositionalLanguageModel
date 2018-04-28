@@ -340,7 +340,7 @@ def subprogram(x, num_layers, cells, initial_states, lengths, reuse, name='',):
             returncells.append(c)
             hiddenlayers.append(prev_layer)
             if idx == num_layers - 1:
-                stacked = tf.stack([tf.range(bs), lengths], 1)
+                stacked = tf.stack([tf.range(bs), lengths - 1], 1)
                 output = tf.gather_nd(
                             prev_layer,
                             stacked,
@@ -466,7 +466,7 @@ for itr in range(100000):
         trn_loss_avg = trn_loss_avg * .9 + trn_loss * .1
         acc_trn_avg = acc_trn_avg * .9 + acc_trn * .1
         acc_trn_single_avg = acc_trn_single_avg * .9 + acc_trn_single * .1
-    if itr % 10 == 0 and itr > 0:
+    if itr % 3 == 0 and itr > 0:
         total_eval_itr += 1.
         val_loss = 0.
         acc_val = 0.
