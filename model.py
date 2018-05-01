@@ -21,7 +21,7 @@ import tensorflow as tf
 import pdb
 import os
 
-#os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 TRADE_COST_FRAC = .003
 EPSILON = 1e-10
 ADV_MULT = 1e-3
@@ -209,9 +209,9 @@ tf.reset_default_graph()
 default_sizes = 128
 size_emb = 64
 num_layers_encoder = 6
-hidden_filters = 256
+hidden_filters = 64
 num_layers_subprogram = 3
-hidden_filters_subprogram = 256
+hidden_filters_subprogram = 64
 init_mag = 1e-3
 cmd_mat = tf.Variable(init_mag*tf.random_normal([num_cmd, size_emb]))
 act_mat = tf.Variable(init_mag*tf.random_normal([num_act, size_emb]))
@@ -356,8 +356,8 @@ action_probabilities_presoftmax = []
 
 subprogram_cell = tf.nn.rnn_cell.LSTMCell(hidden_filters * 2)
 subprogram_s = tf.nn.rnn_cell.LSTMStateTuple(
-        mlp(encoding_last_timestep, [256,], hidden_filters * 2),
-        mlp(encoding_last_timestep, [256,], hidden_filters * 2)
+        mlp(encoding_last_timestep, [], hidden_filters * 2),
+        mlp(encoding_last_timestep, [], hidden_filters * 2)
         )
 subprogram_cell._dtype = tf.float32
 _built = False
