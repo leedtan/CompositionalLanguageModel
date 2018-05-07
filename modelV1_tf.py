@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow.python.framework import ops
 import util
 import numpy as np
+import pickle
 
 #=========== Data =============
 def parseFile(fname, delimiter = ':::'):
@@ -284,7 +285,7 @@ class m1():
         #act_presoftmax = tf.stack(action_probabilities_presoftmax, 1)[:, :, 1:-1, :]
         act_presoftmax = tf.stack(action_probabilities_presoftmax, 1)
         # batch, subprogram, timestep, action_selection
-        logprobabilities = tf.nn.log_softmax(act_presoftmax, -1)
+        self.logprobabilities = tf.nn.log_softmax(act_presoftmax, -1)
         act_presoftmax_flat = tf.reshape(act_presoftmax, [-1, self.max_actions_per_subprogram, self.num_act])
         mask_ph_flat = tf.reshape(self.mask_ph, [-1, self.max_actions_per_subprogram])
         act_ind_flat = tf.reshape(self.act_ind, [-1, self.max_actions_per_subprogram])
@@ -350,7 +351,7 @@ class trainModel:
             lsTrainAcc.append(acc_trn_avg)
 
             if (itr % self.testIter == 0) & (self.flgTest) :
-                val_loss_avg, acc_val_avg = self._test(sess)
+                val_loss_avg, acc_val_avg, pred = self._test(sess)
                 print('itr:', itr, 'trn_loss', round(trn_loss_avg, 4), 'val_loss', round(val_loss_avg, 4))
                 print('itr:', itr, 'trn_acc', round(acc_trn_avg, 4), 'trn_single_acc', round(acc_trn_single_avg,4), 'val_acc', round(acc_val_avg, 4))
                 lsTestAcc.append(acc_val_avg)
@@ -358,6 +359,7 @@ class trainModel:
                     self.bestAcc = acc_val_avg
                     if self.flgSave:
                         save_path = saver.save(sess, self.savePath + "/model")
+                        pickle.dump(pred, open(self.savePath + 'pred.p', 'wb'))
         return self.m, lsTrainAcc, lsTestAcc
 
 
@@ -379,14 +381,16 @@ class trainModel:
 
     def _test(self, sess):
         val_loss_all, acc_val_all = 0, 0
+        pred = []
         for i in range(self.nBatchTest):
             cmd, act, mask, struct, cmd_length, idx = self.testset.next_batch(self.batchSize, isTrain=False)
             val_feed_dict = {self.m.cmd_ind: cmd, self.m.act_ind: act, self.m.mask_ph: mask, self.m.act_lengths: np.clip(struct, a_min=1, a_max=None), self.m.cmd_lengths: cmd_length,}
-            val_loss, acc_val = sess.run([self.m.loss, self.m.percent_fully_correct], val_feed_dict)
+            val_loss, acc_val, pred_i = sess.run([self.m.loss, self.m.percent_fully_correct, self.m.logprobabilities], val_feed_dict)
             bs = len(cmd)
             val_loss_all += val_loss
             acc_val_all += acc_val * bs
-        return val_loss_all/self.nBatchTest, acc_val_all/self.testset._dataSize
+            pred.append(pred_i)
+        return val_loss_all/self.nBatchTest, acc_val_all/self.testset._dataSize, pred
 
     def _loadModel(self):
         pass

@@ -48,6 +48,8 @@ if __name__ == '__main__':
 
     trainset = m1.DataSet(args.trainFile, command_map, action_map, max_cmd_len, max_actions_per_subprogram, max_num_subprograms, delimiter = ':::', seed=100)
     testset = m1.DataSet(args.testFile, command_map, action_map, max_cmd_len, max_actions_per_subprogram, max_num_subprograms, delimiter = ':::', seed=100)
+    print('Length of training set: ', trainset._dataSize)
+    print('Length of test set: ', testset._dataSize)
 
     print('Model parameters: ', model_paras)
     model = m1.m1(model_paras)
