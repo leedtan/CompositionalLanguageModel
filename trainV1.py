@@ -31,9 +31,9 @@ if __name__ == '__main__':
 
     max_cmd_len = 10
     max_actions_per_subprogram = 10
-    max_num_subprograms = 7
+    max_num_subprograms = 8
     num_cmd = 14
-    num_act = 9
+    num_act = 10
 
     train_paras = {'batchSize': args.batchSize, 'nIter': args.nIter, 'seed': args.seed, 'testIter': args.testIter,
                    'flgSave': args.flgSave, 'savePath': args.outputPath, }
