@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+python -u ../trainV1.py --nIter 1000 --testIter 100 --trainFile /Users/jshliu/Google\ Drive/NYUClass/DSGA_3001_Cognitive/project_local/data/simple_split/tasks_train_simple.txt --testFile /Users/jshliu/Google\ Drive/NYUClass/DSGA_3001_Cognitive/project_local/data/simple_split/tasks_test_simple.txt --mapFile /Users/jshliu/Google\ Drive/NYUClass/DSGA_3001_Cognitive/project_local/data/maps.p --outputPath /Users/jshliu/Google\ Drive/NYUClass/DSGA_3001_Cognitive/project_local/code/run/m1_test/

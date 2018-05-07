@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+python -u ../dataProcess.py --filePath /Users/jshliu/Documents/Git/SCAN/ --lengthFileName /Users/jshliu/Documents/Git/CompositionalLanguageModel/tasks_with_length_tags.txt --outPath /Users/jshliu/Google\ Drive/NYUClass/DSGA_3001_Cognitive/project_local/data/
