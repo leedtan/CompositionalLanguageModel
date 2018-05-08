@@ -30,10 +30,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     max_cmd_len = 10
-    max_actions_per_subprogram = 10
-    max_num_subprograms = 8
+    max_actions_per_subprogram = 9
+    max_num_subprograms = 7
     num_cmd = 14
-    num_act = 10
+    num_act = 9
 
     train_paras = {'batchSize': args.batchSize, 'nIter': args.nIter, 'seed': args.seed, 'testIter': args.testIter,
                    'flgSave': args.flgSave, 'savePath': args.outputPath, }

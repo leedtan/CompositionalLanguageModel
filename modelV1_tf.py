@@ -38,17 +38,15 @@ def file2np(commands, actions, structures, command_map, action_map, max_cmd_len,
         for step in struct:
             end = start + step
             a = act[start:end]
-            padding = max_actions_per_subprogram - step - 2 # Add start and end action to each sub-program
-            action_row.append([action_map['start_action']] + a + [action_map['end_action']] + [0] * padding)
+            padding = max_actions_per_subprogram - step - 1 # Add end action to each sub-program
+            action_row.append(a + [action_map['end_action']] + [0] * padding)
             start = end
         actions_structured.append(
-            [[action_map['start_subprogram']] + [0] * (max_actions_per_subprogram - 1)] + action_row +
-            [[action_map['end_subprogram']] + [0] * (max_actions_per_subprogram - 1)] +
-            [[0] * max_actions_per_subprogram] * (max_num_subprograms - len(struct) - 2)
+            action_row + [[action_map['end_subprogram']] + [0] * (max_actions_per_subprogram - 1)] +
+            [[0] * max_actions_per_subprogram] * (max_num_subprograms - len(struct) - 1)
         )
     act_np = np.array(actions_structured)
-    struct_padded = [[1] + [sa + 1 for sa in s] + [1] + [0] * (max_num_subprograms - len(s) - 2) for s in structures]
-    # sa+1: Add end_act; start_act token directly used as first input to subprogram
+    struct_padded = [[sa + 1 for sa in s] + [1] + [0] * (max_num_subprograms - len(s) - 1) for s in structures] # Add end
     struct_np = np.array(struct_padded)
 
     mask_list = [[np.concatenate((np.ones(st), np.zeros(max_actions_per_subprogram - st)), 0) for st in s] for s in struct_np]
@@ -198,7 +196,7 @@ class m1():
         self.num_cmd = model_paras.get('num_cmd', 14)
         self.num_act = model_paras.get('num_act', 9)
         self.max_cmd_len = model_paras.get('max_cmd_len', 10)
-        self.max_num_subprograms = model_paras.get('max_num_subprograms', 8)
+        self.max_num_subprograms = model_paras.get('max_num_subprograms', 7)
         self.max_actions_per_subprogram = model_paras.get('max_actions_per_subprogram', 10)
 
         self.hidden_filters = model_paras.get('hidden_filters', 128)
@@ -220,13 +218,16 @@ class m1():
         self.cmd_lengths = tf.placeholder(tf.int32, shape=(None,))
         self.act_lengths = tf.placeholder(tf.int32, shape=(None, self.max_num_subprograms))
         self.learning_rate = tf.placeholder(tf.float32, shape=(None))
-        self.isTrain = tf.placeholder_with_default(True, shape = None)
 
         ## Embeddings
         self.cmd_mat = tf.Variable(self.init_mag * tf.random_normal([self.num_cmd, self.size_emb]))
         self.act_mat = tf.Variable(self.init_mag * tf.random_normal([self.num_act, self.size_emb]))
+        self.act_st_emb = tf.Variable(self.init_mag * tf.random_normal([self.size_emb])) # Start_action token and embedding
         cmd_emb = tf.nn.embedding_lookup(self.cmd_mat, self.cmd_ind)
         act_emb = tf.nn.embedding_lookup(self.act_mat, self.act_ind)
+        tf_bs = tf.shape(self.act_ind)[0]
+        act_st_emb_expanded = tf.tile(tf.reshape(self.act_st_emb, [1, 1, 1, self.size_emb]), [tf_bs, self.max_num_subprograms, 1, 1])
+        act_emb_with_st = tf.concat((act_st_emb_expanded, act_emb), 2)
 
         ## Encoder
         first_cell_encoder = [tf.nn.rnn_cell.LSTMCell(self.hidden_filters, forget_bias=1., name='layer1_' + d) for d in ['f', 'b']]
@@ -266,16 +267,15 @@ class m1():
         initial_cmb_encoding = last_encoding
 
         action_probabilities_presoftmax = []
-        autoregressive = act_emb[:, 0, :, :]  # Initiate step
-
         # Iterate through each subprogram
         for sub_idx in range(self.max_num_subprograms):
-            from_last_layer = tf.tile(tf.expand_dims(tf.concat((initial_cmb_encoding, last_encoding), 1), 1), [1, self.max_actions_per_subprogram, 1])  # Shape bs x (self.max_actions_per_subprogram) x LSTM_outx2
+            from_last_layer = tf.tile(tf.expand_dims(tf.concat((initial_cmb_encoding, last_encoding), 1), 1), [1, self.max_actions_per_subprogram+1, 1])  # Shape bs x (self.max_actions_per_subprogram) x LSTM_outx2
+            autoregressive = act_emb_with_st[:, sub_idx, :, :] # Use previous action as input to next action
             x_input = tf.concat((from_last_layer, autoregressive), -1)  # bs x (self.max_actions_per_subprogram) x (input dim)
             subprogram_last_layer, _, subprogram_hidden_layers, subprogram_output = subprogram(x_input, self.num_layers_subprogram, cells_subprogram, None,
                 lengths=self.act_lengths[:, sub_idx], reuse=(sub_idx > 0), name='subprogram')  # Reuse the same network across subprogram
             action_prob_flat = util.mlp(tf.reshape(subprogram_last_layer, [-1, self.hidden_filters_subprogram]), [], output_size=self.num_act, name='action_choice_mlp', reuse=(sub_idx > 0))  # (bs x num_act_sub) x num_act
-            action_prob_expanded = tf.reshape(action_prob_flat, [-1, self.max_actions_per_subprogram, self.num_act])
+            action_prob_expanded = tf.reshape(action_prob_flat, [-1, self.max_actions_per_subprogram + 1, self.num_act])
             action_probabilities_layer = tf.nn.softmax(action_prob_expanded, axis=-1)
             action_probabilities_presoftmax.append(action_prob_expanded)
             # Recurrent across subprograms
@@ -284,14 +284,9 @@ class m1():
             insert = tf.tanh(delta2) + delta2 / 100
             last_encoding = last_encoding * remember + insert
             encodings.append(last_encoding)
-            # Use prediction in test run
-            action_taken_layer = tf.argmax(action_probabilities_layer, -1, output_type=tf.int32)
-            act_emb_pred_layer = tf.nn.embedding_lookup(self.act_mat, action_taken_layer)
-            autoregressive = tf.cond(self.isTrain, lambda: act_emb[:, sub_idx, :, :], lambda: act_emb_pred_layer)
 
         ## Loss
-        #act_presoftmax = tf.stack(action_probabilities_presoftmax, 1)[:, :, 1:-1, :]
-        act_presoftmax = tf.stack(action_probabilities_presoftmax, 1)
+        act_presoftmax = tf.stack(action_probabilities_presoftmax, 1)[:, :, :-1, :]
         # batch, subprogram, timestep, action_selection
         self.logprobabilities = tf.nn.log_softmax(act_presoftmax, -1)
         act_presoftmax_flat = tf.reshape(act_presoftmax, [-1, self.max_actions_per_subprogram, self.num_act])
@@ -316,8 +311,6 @@ class m1():
         opt_fcn = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
         # opt_fcn = tf.train.MomentumOptimizer(learning_rate=learning_rate, use_nesterov=True, momentum=.8)
         self.optimizer, grad_norm_total = util.apply_clipped_optimizer(opt_fcn, self.loss)
-
-
 
 
 #=========== Training module =============
@@ -375,8 +368,7 @@ class trainModel:
 
     def _trainEpoch(self, sess, iter, trn_loss_avg, acc_trn_avg, acc_trn_single_avg):
         cmd, act, mask, struct, cmd_length, idx = self.trainset.next_batch(self.batchSize, isTrain=True)
-        trn_feed_dict = {self.m.cmd_ind: cmd, self.m.act_ind: act, self.m.mask_ph: mask, self.m.isTrain: True,
-                         self.m.act_lengths: np.clip(struct, a_min=1, a_max=None), self.m.cmd_lengths: cmd_length}
+        trn_feed_dict = {self.m.cmd_ind: cmd, self.m.act_ind: act, self.m.mask_ph: mask, self.m.act_lengths: np.clip(struct, a_min=1, a_max=None), self.m.cmd_lengths: cmd_length}
         trn_feed_dict[self.m.learning_rate] = .02 / (np.power(iter + 10, .6))
         _, trn_loss, acc_trn_single, acc_trn = sess.run([self.m.optimizer, self.m.loss, self.m.percent_correct, self.m.percent_fully_correct], trn_feed_dict)
 
@@ -395,8 +387,7 @@ class trainModel:
         pred = []
         for i in range(self.nBatchTest):
             cmd, act, mask, struct, cmd_length, idx = self.testset.next_batch(self.batchSize, isTrain=False)
-            val_feed_dict = {self.m.cmd_ind: cmd, self.m.act_ind: act, self.m.mask_ph: mask, self.m.isTrain: False,
-                             self.m.act_lengths: np.clip(struct, a_min=1, a_max=None), self.m.cmd_lengths: cmd_length,}
+            val_feed_dict = {self.m.cmd_ind: cmd, self.m.act_ind: act, self.m.mask_ph: mask, self.m.act_lengths: np.clip(struct, a_min=1, a_max=None), self.m.cmd_lengths: cmd_length,}
             val_loss, acc_val, pred_i = sess.run([self.m.loss, self.m.percent_fully_correct, self.m.logprobabilities], val_feed_dict)
             bs = len(cmd)
             val_loss_all += val_loss
