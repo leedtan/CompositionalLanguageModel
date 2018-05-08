@@ -326,6 +326,7 @@ class trainModel:
         self.testIter = train_paras.get('testIter', 50)  # Print validation every testIter iterations
         self.flgSave = train_paras.get('flgSave', True)
         self.savePath = train_paras.get('savePath')
+        self.lrInit = train_paras.get('lrInit', 0.1)
 
         self.trainset = trainset
         self.testset = testset
@@ -369,7 +370,7 @@ class trainModel:
     def _trainEpoch(self, sess, iter, trn_loss_avg, acc_trn_avg, acc_trn_single_avg):
         cmd, act, mask, struct, cmd_length, idx = self.trainset.next_batch(self.batchSize, isTrain=True)
         trn_feed_dict = {self.m.cmd_ind: cmd, self.m.act_ind: act, self.m.mask_ph: mask, self.m.act_lengths: np.clip(struct, a_min=1, a_max=None), self.m.cmd_lengths: cmd_length}
-        trn_feed_dict[self.m.learning_rate] = .02 / (np.power(iter + 10, .6))
+        trn_feed_dict[self.m.learning_rate] = self.lrInit / (np.power(iter + 10, .6))
         _, trn_loss, acc_trn_single, acc_trn = sess.run([self.m.optimizer, self.m.loss, self.m.percent_correct, self.m.percent_fully_correct], trn_feed_dict)
 
         if iter == 0:

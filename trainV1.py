@@ -26,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument("--size_emb", type=int, default=64)
     parser.add_argument("--init_mag", type=float, default=1e-3)
     parser.add_argument("--l2_lambda", type=float, default=1e-3)
+    parser.add_argument("--lrInit", type=float, default=0.1)
 
     args = parser.parse_args()
 
@@ -36,7 +37,7 @@ if __name__ == '__main__':
     num_act = 9
 
     train_paras = {'batchSize': args.batchSize, 'nIter': args.nIter, 'seed': args.seed, 'testIter': args.testIter,
-                   'flgSave': args.flgSave, 'savePath': args.outputPath, }
+                   'flgSave': args.flgSave, 'savePath': args.outputPath, 'lrInit': args.lrInit}
     model_paras = {'hidden_filters': args.hidden_filters, 'num_layers_encoder': args.num_layers_encoder,
                    'size_emb': args.size_emb, 'num_cmd': num_cmd, 'num_act': num_act, 'init_mag': args.init_mag,
                    'max_cmd_len': max_cmd_len, 'max_num_subprograms': max_num_subprograms,

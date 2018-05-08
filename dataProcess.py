@@ -34,9 +34,9 @@ def build_fmap_invmap(unique, num_unique):
 def buildDict(uni_commands, uni_actions):
     uni_commands.add('end_command')
     uni_actions.add('end_subprogram')
-    uni_actions.add('start_subprogram')
+    #uni_actions.add('start_subprogram')
     uni_actions.add('end_action')
-    uni_actions.add('start_action')
+    #uni_actions.add('start_action')
     num_cmd = len(uni_commands)
     num_act = len(uni_actions)
     command_map, command_invmap = build_fmap_invmap(uni_commands, num_cmd)
