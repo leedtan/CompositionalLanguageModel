@@ -9,9 +9,15 @@ import pickle
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument(
-      "--trainFile", default='data/length_split/tasks_train_length.txt')
+      "--trainFile",
+      default=
+      'data/add_prim_split/with_additional_examples/tasks_train_addprim_complex_jump_num1_rep5.txt'
+  )
   parser.add_argument(
-      "--testFile", default='data/length_split/tasks_test_length.txt')
+      "--testFile",
+      default=
+      'data/add_prim_split/with_additional_examples/tasks_test_addprim_complex_jump_num4_rep5.txt'
+  )
   parser.add_argument("--mapFile", default='data/maps.p')
   parser.add_argument("--outputPath")
   parser.add_argument("--batchSize", type=int, default=32)
